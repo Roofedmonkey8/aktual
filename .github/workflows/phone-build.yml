@@ -40,12 +40,12 @@ jobs:
           cp aktual-app/android/build/outputs/apk/debug/*.apk "$apk"
           notes="Debug build of \`$BRANCH\` at ${GITHUB_SHA::7}. Installs as a separate app (Aktual Dev)."
 
-          # Move the tag to this commit, keeping one pre-release per branch
+          # A fresh release each time, so the Releases page shows when this build was made. Editing
+          # the old one would keep its original date.
+          gh release delete "$tag" --yes --cleanup-tag || true
+          git push origin ":refs/tags/$tag" || true
           git tag -f "$tag"
           git push -f origin "refs/tags/$tag"
-          if gh release view "$tag" > /dev/null 2>&1; then
-            gh release edit "$tag" --notes "$notes" --prerelease
-          else
-            gh release create "$tag" --title "Phone build: $BRANCH" --notes "$notes" --prerelease
-          fi
-          gh release upload "$tag" "$apk" --clobber
+          gh release create "$tag" "$apk" \
+            --title "Phone build: $BRANCH ($(date -u +'%b %-d, %H:%M UTC'))" \
+            --notes "$notes" --prerelease
