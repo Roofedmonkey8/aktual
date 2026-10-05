@@ -45,3 +45,17 @@ WHERE b.month >= :start AND b.month <= :end;
 
 zeroBudgetMonths:
 SELECT id, buffered FROM zero_budget_months;
+
+-- Live groups in the order budgetCategories lists their categories
+budgetGroups:
+SELECT id, name, is_income, hidden
+FROM category_groups
+WHERE tombstone = 0
+ORDER BY is_income, sort_order, id;
+
+-- packages/loot-core/src/server/budget/actions.ts setBudget()
+zeroBudgetId:
+SELECT id FROM zero_budgets WHERE month = :month AND category = :category LIMIT 1;
+
+reflectBudgetId:
+SELECT id FROM reflect_budgets WHERE month = :month AND category = :category LIMIT 1;

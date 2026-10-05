@@ -14,6 +14,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable data object HomeNavRoute : BudgetNavKey.Home
 
+@Serializable data object BudgetNavRoute : BudgetNavKey.Budget
+
 @Serializable data object TransactionsNavRoute : BudgetNavKey.Transactions
 
 @Serializable data class TransactionsWithTagNavRoute(val id: TagId) : BudgetNavKey.Transactions

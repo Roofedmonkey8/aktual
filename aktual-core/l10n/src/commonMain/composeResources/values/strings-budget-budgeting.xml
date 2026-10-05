@@ -1,0 +1,41 @@
+<resources>
+  <string name="budgeting_title">Budget</string>
+  <string name="budgeting_previous_month">Previous month</string>
+  <string name="budgeting_next_month">Next month</string>
+  <string name="budgeting_this_month">Go to this month</string>
+  <string name="budgeting_menu">More options</string>
+  <string name="budgeting_show_hidden">Show hidden categories</string>
+  <string name="budgeting_hide_hidden">Hide hidden categories</string>
+
+  <string name="budgeting_to_budget">To budget</string>
+  <string name="budgeting_overbudgeted">Overbudgeted</string>
+  <string name="budgeting_available_funds">Available funds</string>
+  <string name="budgeting_overspent_last_month">Overspent last month</string>
+  <string name="budgeting_budgeted">Budgeted</string>
+  <string name="budgeting_for_next_month">For next month</string>
+  <string name="budgeting_saved">Saved</string>
+  <string name="budgeting_overspent">Overspent</string>
+  <string name="budgeting_expected_income">Expected income</string>
+  <string name="budgeting_received">Received</string>
+  <string name="budgeting_spent">Spent</string>
+  <string name="budgeting_balance">Balance</string>
+  <string name="budgeting_category">Category</string>
+  <string name="budgeting_income">Income</string>
+  <string name="budgeting_hidden">Hidden</string>
+  <string name="budgeting_expand_group">Expand %1$s</string>
+  <string name="budgeting_collapse_group">Collapse %1$s</string>
+
+  <string name="budgeting_edit_title">Budget for %1$s</string>
+  <string name="budgeting_edit_hint">How much to set aside in %1$s</string>
+  <string name="budgeting_edit_spent">%1$s spent this month</string>
+  <string name="budgeting_edit_last_month">Last month: %1$s</string>
+  <string name="budgeting_edit_use_last_month">Use last month\'s</string>
+  <string name="budgeting_edit_cover_spending">Cover spending</string>
+  <string name="budgeting_edit_clear">Clear</string>
+  <string name="budgeting_edit_save">Save</string>
+  <string name="budgeting_edit_cancel">Cancel</string>
+  <string name="budgeting_edit_failed">Couldn\'t save the budget</string>
+
+  <string name="budgeting_empty">No categories yet</string>
+  <string name="budgeting_empty_second">Add categories in Actual and they\'ll show up here after syncing</string>
+</resources>

@@ -24,6 +24,7 @@ private val materialIcons =
   with(MaterialIcons) {
     listOf(
       AccountBalance,
+      AccountBalanceWallet,
       Add,
       Apps,
       ArrowBack,
@@ -39,6 +40,8 @@ private val materialIcons =
       CalendarToday,
       CalendarViewWeek,
       Check,
+      ChevronLeft,
+      ChevronRight,
       Clear,
       ClearAll,
       Cloud,
@@ -52,6 +55,7 @@ private val materialIcons =
       Dialogs,
       Edit,
       Error,
+      ExpandMore,
       FilterList,
       FormatAlignCenter,
       FormatAlignLeft,

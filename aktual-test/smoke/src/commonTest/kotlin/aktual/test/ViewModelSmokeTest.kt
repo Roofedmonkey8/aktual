@@ -8,6 +8,7 @@ import aktual.account.vm.ServerUrlViewModel
 import aktual.budget.banksync.vm.BankSyncViewModel
 import aktual.budget.banksync.vm.link.LinkBankAccountViewModel
 import aktual.budget.banksync.vm.settings.BankSyncSettingsViewModel
+import aktual.budget.budgeting.vm.BudgetViewModel
 import aktual.budget.home.vm.HomeViewModel
 import aktual.budget.list.vm.ListBudgetsViewModel
 import aktual.budget.reports.vm.choosetype.ChooseReportTypeViewModel
@@ -120,6 +121,8 @@ abstract class ViewModelSmokeTest<G : TestAppGraph> {
   @Test fun customThemeSettings() = testVm<CustomThemeSettingsViewModel>()
 
   @Test fun home() = testVm<HomeViewModel>()
+
+  @Test fun budget() = testVm<BudgetViewModel>()
 
   @Test fun licenses() = testSavedStateVM<LicensesViewModel>()
 

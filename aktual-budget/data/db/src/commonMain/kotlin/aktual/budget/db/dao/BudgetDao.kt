@@ -2,11 +2,14 @@ package aktual.budget.db.dao
 
 import aktual.budget.db.BudgetCategories
 import aktual.budget.db.BudgetDatabase
+import aktual.budget.db.BudgetGroups
 import aktual.budget.db.BudgetSpentByMonth
 import aktual.budget.db.Zero_budget_months
+import aktual.budget.db.withResult
 import aktual.budget.model.Amount
 import aktual.budget.model.CategoryId
 import alakazam.kotlin.CoroutineContexts
+import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOne
@@ -64,6 +67,21 @@ class BudgetDao(database: BudgetDatabase, private val contexts: CoroutineContext
 
   fun observeEnvelopeMonths(): Flow<List<Zero_budget_months>> =
     queries.zeroBudgetMonths().asFlow().mapToList(contexts.default).distinctUntilChanged()
+
+  // Live groups, income groups last, in the order observeCategories() lists their categories
+  fun observeGroups(): Flow<List<BudgetGroups>> =
+    queries.budgetGroups().asFlow().mapToList(contexts.default).distinctUntilChanged()
+
+  // The row holding a category's budget for a month, if one has been set
+  suspend fun envelopeBudgetId(month: YearMonth, category: CategoryId): String? =
+    queries.withResult {
+      zeroBudgetId(month, category).awaitAsOneOrNull()
+    }
+
+  suspend fun trackingBudgetId(month: YearMonth, category: CategoryId): String? =
+    queries.withResult {
+      reflectBudgetId(month, category).awaitAsOneOrNull()
+    }
 
   @Suppress("CanBeNonNullable")
   private fun categoryBudget(
