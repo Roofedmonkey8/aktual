@@ -24,6 +24,7 @@ import aktual.budget.budgeting.vm.BudgetSummary
 import aktual.budget.budgeting.vm.BudgetViewModel
 import aktual.budget.budgeting.vm.CategoryState
 import aktual.budget.budgeting.vm.GroupState
+import aktual.budget.budgeting.vm.ManageCategoriesViewModel
 import aktual.budget.model.Amount
 import aktual.core.icons.material.CalendarToday
 import aktual.core.icons.material.ChevronLeft
@@ -103,40 +104,26 @@ import kotlinx.datetime.YearMonth
 internal fun BudgetScreen(
   modifier: Modifier = Modifier,
   viewModel: BudgetViewModel = metroViewModel(),
+  manageViewModel: ManageCategoriesViewModel = metroViewModel(),
 ) {
   val state by viewModel.state.collectAsStateWithLifecycle()
   val snackbar = remember { SnackbarHostState() }
-  val saveFailed = Strings.budgetingEditFailed
 
-  LaunchedEffect(viewModel) {
-    viewModel.events.collect { event ->
-      when (event) {
-        BudgetEvent.SaveFailed -> snackbar.showSnackbar(saveFailed)
-      }
+  val failures = failureMessages()
+  var dialog by remember { mutableStateOf<BudgetDialog?>(null) }
+
+  val onEvent: suspend (BudgetEvent) -> Unit = { event ->
+    if (event is BudgetEvent.ConfirmDelete) {
+      dialog = BudgetDialog.Delete(event.target, event.needsTransfer)
+    } else {
+      failures.message(event)?.let { snackbar.showSnackbar(it) }
     }
   }
+  LaunchedEffect(viewModel) { viewModel.events.collect(onEvent) }
+  LaunchedEffect(manageViewModel) { manageViewModel.events.collect(onEvent) }
 
-  var dialog by remember { mutableStateOf<BudgetDialog?>(null) }
   val onAction = BudgetActionHandler { action ->
-    when (action) {
-      PreviousMonth -> viewModel.previousMonth()
-      NextMonth -> viewModel.nextMonth()
-      ThisMonth -> viewModel.thisMonth()
-      Refresh -> viewModel.refresh()
-      is SetShowHidden -> viewModel.setShowHidden(action.show)
-      is ToggleGroup -> viewModel.toggleGroup(action.id)
-      is EditBudget -> dialog = BudgetDialog.Category(action.category.id)
-      is Open -> dialog = action.dialog
-      is SetBudget -> viewModel.setBudget(action.category, action.amount)
-      is MoveMoney -> viewModel.moveMoney(action.from, action.to, action.amount)
-      is CoverOverspending -> viewModel.coverOverspending(action.category, action.from)
-      is SetRollover -> viewModel.setRollover(action.category, action.rollover)
-      is SetNote -> viewModel.setNote(action.category, action.note)
-      is Hold -> viewModel.holdForNextMonth(action.amount)
-      ResetHold -> viewModel.resetHold()
-      CopyLastMonth -> viewModel.copyLastMonth()
-      SetAllToZero -> viewModel.setAllToZero()
-    }
+    viewModel.handle(action, manageViewModel, openDialog = { dialog = it })
   }
 
   BudgetScaffold(
@@ -296,6 +283,10 @@ private fun BudgetMenu(state: BudgetState, onAction: BudgetActionHandler) {
           text = Strings.budgetingMenuMonthNotes,
           onClick = { open(BudgetDialog.Notes(id = null)) },
         )
+        AktualDropdownMenuItem(
+          text = Strings.budgetingMenuAddGroup,
+          onClick = { open(BudgetDialog.NewGroup) },
+        )
       }
       AktualDropdownMenuItem(
         text = if (state.showHidden) Strings.budgetingHideHidden else Strings.budgetingShowHidden,
@@ -400,6 +391,7 @@ private fun LazyListScope.section(
       group = group,
       columns = columns,
       onToggle = { onAction(ToggleGroup(group.id)) },
+      onOptions = { onAction(Open(BudgetDialog.GroupOptions(group.id))) },
       onEdit = { category: CategoryState -> onAction(EditBudget(category)) },
     )
   }
@@ -422,3 +414,75 @@ private fun PreviewBudgetScaffold(
   PreviewWithColoredParams(params) {
     BudgetScaffold(state = this, onAction = {})
   }
+
+/** The snackbar text for each way a change can fail, looked up ahead of the event that needs it */
+private class FailureMessages(
+  val saveFailed: String,
+  val duplicate: String,
+  val blank: String,
+  val incomeMismatch: String,
+) {
+  fun message(event: BudgetEvent): String? =
+    when (event) {
+      BudgetEvent.SaveFailed -> saveFailed
+      is BudgetEvent.DuplicateName -> duplicate.replace(PLACEHOLDER, event.name)
+      BudgetEvent.BlankName -> blank
+      BudgetEvent.IncomeMismatch -> incomeMismatch
+      is BudgetEvent.ConfirmDelete -> null
+    }
+}
+
+@Composable
+private fun failureMessages() =
+  FailureMessages(
+    saveFailed = Strings.budgetingEditFailed,
+    duplicate = Strings.budgetingDuplicateName(PLACEHOLDER),
+    blank = Strings.budgetingBlankName,
+    incomeMismatch = Strings.budgetingIncomeMismatch,
+  )
+
+private const val PLACEHOLDER = "%s"
+
+@Suppress("CyclomaticComplexMethod")
+private fun BudgetViewModel.handle(
+  action: BudgetAction,
+  manage: ManageCategoriesViewModel,
+  openDialog: (BudgetDialog?) -> Unit,
+) {
+  when (action) {
+    PreviousMonth -> previousMonth()
+    NextMonth -> nextMonth()
+    ThisMonth -> thisMonth()
+    Refresh -> refresh()
+    is SetShowHidden -> setShowHidden(action.show)
+    is ToggleGroup -> toggleGroup(action.id)
+    is EditBudget -> openDialog(BudgetDialog.Category(action.category.id))
+    is Open -> openDialog(action.dialog)
+    is SetBudget -> setBudget(action.category, action.amount)
+    is MoveMoney -> moveMoney(action.from, action.to, action.amount)
+    is CoverOverspending -> coverOverspending(action.category, action.from)
+    is SetRollover -> setRollover(action.category, action.rollover)
+    is SetNote -> setNote(action.category, action.note)
+    is Hold -> holdForNextMonth(action.amount)
+    ResetHold -> resetHold()
+    CopyLastMonth -> copyLastMonth()
+    SetAllToZero -> setAllToZero()
+    is BudgetAction.Manage -> manage.handle(action)
+  }
+}
+
+private fun ManageCategoriesViewModel.handle(action: BudgetAction.Manage) {
+  when (action) {
+    is BudgetAction.CreateGroup -> createGroup(action.name)
+    is BudgetAction.RenameGroup -> renameGroup(action.id, action.name)
+    is BudgetAction.SetGroupHidden -> setGroupHidden(action.id, action.hidden)
+    is BudgetAction.MoveGroup -> moveGroup(action.id, action.direction)
+    is BudgetAction.CreateCategory -> createCategory(action.name, action.group)
+    is BudgetAction.RenameCategory -> renameCategory(action.id, action.name)
+    is BudgetAction.SetCategoryHidden -> setCategoryHidden(action.id, action.hidden)
+    is BudgetAction.MoveCategory -> moveCategory(action.id, action.direction)
+    is BudgetAction.MoveCategoryToGroup -> moveCategoryToGroup(action.id, action.group)
+    is BudgetAction.RequestDelete -> requestDelete(action.target)
+    is BudgetAction.Delete -> delete(action.target, action.transferTo)
+  }
+}

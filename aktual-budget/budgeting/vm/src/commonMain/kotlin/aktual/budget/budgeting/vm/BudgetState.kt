@@ -87,4 +87,20 @@ data class CategoryState(
 
 sealed interface BudgetEvent {
   data object SaveFailed : BudgetEvent
+
+  data class DuplicateName(val name: String) : BudgetEvent
+
+  data object BlankName : BudgetEvent
+
+  data object IncomeMismatch : BudgetEvent
+
+  /** Deleting [target] can go ahead, picking somewhere for its money first if [needsTransfer] */
+  data class ConfirmDelete(val target: DeleteTarget, val needsTransfer: Boolean) : BudgetEvent
+}
+
+@Immutable
+sealed interface DeleteTarget {
+  data class Category(val id: CategoryId) : DeleteTarget
+
+  data class Group(val id: CategoryGroupId) : DeleteTarget
 }

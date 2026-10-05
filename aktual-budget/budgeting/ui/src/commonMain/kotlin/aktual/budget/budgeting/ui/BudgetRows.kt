@@ -20,6 +20,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,8 +43,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -110,6 +113,7 @@ internal fun GroupCard(
   group: GroupState,
   columns: Columns,
   onToggle: () -> Unit,
+  onOptions: () -> Unit,
   onEdit: (CategoryState) -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -121,7 +125,7 @@ internal fun GroupCard(
         .background(colors.tableBackground, RounderCardShape)
         .border(Hairline, colors.tableBorder, RounderCardShape)
   ) {
-    GroupHeader(group = group, columns = columns, onToggle = onToggle)
+    GroupHeader(group = group, columns = columns, onToggle = onToggle, onOptions = onOptions)
 
     AnimatedVisibility(
       visible = !group.isCollapsed,
@@ -139,7 +143,13 @@ internal fun GroupCard(
 }
 
 @Composable
-private fun GroupHeader(group: GroupState, columns: Columns, onToggle: () -> Unit) {
+private fun GroupHeader(
+  group: GroupState,
+  columns: Columns,
+  onToggle: () -> Unit,
+  onOptions: () -> Unit,
+) {
+  val optionsLabel = Strings.budgetingGroupOptions(group.name)
   val rotation by animateFloatAsState(if (group.isCollapsed) -90f else 0f)
   val toggleLabel =
     if (group.isCollapsed) {
@@ -152,7 +162,23 @@ private fun GroupHeader(group: GroupState, columns: Columns, onToggle: () -> Uni
     modifier =
       Modifier.fillMaxWidth()
         .background(colors.tableRowHeaderBackground)
-        .clickable(onClickLabel = toggleLabel, role = Role.Button, onClick = onToggle)
+        // Tapping collapses the group; holding opens its options, as upstream's group menu
+        .combinedClickable(
+          onClickLabel = toggleLabel,
+          role = Role.Button,
+          onLongClickLabel = optionsLabel,
+          onLongClick = onOptions,
+          onClick = onToggle,
+        )
+        .semantics {
+          customActions =
+            listOf(
+              CustomAccessibilityAction(optionsLabel) {
+                onOptions()
+                true
+              }
+            )
+        }
         .padding(
           horizontal = BudgetDS.rowHorizontalPadding,
           vertical = BudgetDS.groupVerticalPadding,
@@ -200,13 +226,7 @@ private fun CategoryRow(category: CategoryState, columns: Columns, onEdit: () ->
   Row(
     modifier =
       Modifier.fillMaxWidth()
-        .then(
-          if (isEditable) {
-            Modifier.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onEdit)
-          } else {
-            Modifier
-          }
-        )
+        .then(Modifier.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onEdit))
         .padding(
           horizontal = BudgetDS.rowHorizontalPadding,
           vertical = BudgetDS.rowVerticalPadding,

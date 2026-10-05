@@ -1,6 +1,8 @@
 package aktual.budget.budgeting.ui
 
+import aktual.budget.budgeting.domain.Direction
 import aktual.budget.budgeting.vm.CategoryState
+import aktual.budget.budgeting.vm.DeleteTarget
 import aktual.budget.model.Amount
 import aktual.budget.model.CategoryGroupId
 import aktual.budget.model.CategoryId
@@ -42,6 +44,31 @@ internal sealed interface BudgetAction {
   data object CopyLastMonth : BudgetAction
 
   data object SetAllToZero : BudgetAction
+
+  /** Changes to the categories and groups themselves */
+  sealed interface Manage : BudgetAction
+
+  data class CreateGroup(val name: String) : Manage
+
+  data class RenameGroup(val id: CategoryGroupId, val name: String) : Manage
+
+  data class SetGroupHidden(val id: CategoryGroupId, val hidden: Boolean) : Manage
+
+  data class MoveGroup(val id: CategoryGroupId, val direction: Direction) : Manage
+
+  data class CreateCategory(val name: String, val group: CategoryGroupId) : Manage
+
+  data class RenameCategory(val id: CategoryId, val name: String) : Manage
+
+  data class SetCategoryHidden(val id: CategoryId, val hidden: Boolean) : Manage
+
+  data class MoveCategory(val id: CategoryId, val direction: Direction) : Manage
+
+  data class MoveCategoryToGroup(val id: CategoryId, val group: CategoryGroupId) : Manage
+
+  data class RequestDelete(val target: DeleteTarget) : Manage
+
+  data class Delete(val target: DeleteTarget, val transferTo: CategoryId?) : Manage
 }
 
 @Immutable

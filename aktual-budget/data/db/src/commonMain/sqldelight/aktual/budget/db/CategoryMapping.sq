@@ -9,3 +9,6 @@ insert:
   INSERT OR REPLACE
     INTO category_mapping(id, transferId)
     VALUES (?, ?);
+
+-- packages/loot-core/src/server/db/index.ts deleteCategory()
+mappedTo: SELECT id FROM category_mapping WHERE transferId = ?;

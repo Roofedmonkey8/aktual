@@ -1,0 +1,32 @@
+<resources>
+  <string name="payees_title">Payees</string>
+  <string name="payees_search">Search payees</string>
+  <string name="payees_add">Add payee</string>
+  <string name="payees_new_title">New payee</string>
+  <string name="payees_name">Name</string>
+  <string name="payees_create">Add</string>
+  <string name="payees_save">Save</string>
+  <string name="payees_cancel">Cancel</string>
+  <string name="payees_favorite">Favorite</string>
+  <string name="payees_favorite_hint">Shown first when picking a payee on desktop</string>
+  <string name="payees_learn">Learn categories</string>
+  <string name="payees_learn_hint">Rules suggest the category this payee is usually given</string>
+  <string name="payees_merge">Merge into another payee</string>
+  <string name="payees_merge_title">Merge %1$s into…</string>
+  <string name="payees_merge_message">All of %1$s\'s transactions will show %2$s, and %1$s will be deleted.</string>
+  <string name="payees_merge_confirm">Merge</string>
+  <string name="payees_delete">Delete payee</string>
+  <string name="payees_delete_title">Delete %1$s?</string>
+  <string name="payees_delete_message">Its transactions keep their amounts but will show no payee.</string>
+  <string name="payees_delete_confirm">Delete</string>
+  <plurals name="payees_transactions">
+    <item quantity="one">%1$d transaction</item>
+    <item quantity="other">%1$d transactions</item>
+  </plurals>
+  <string name="payees_no_transactions">No transactions</string>
+  <string name="payees_empty">No payees yet</string>
+  <string name="payees_no_matches">No payees match</string>
+  <string name="payees_duplicate">There\'s already a payee called %1$s</string>
+  <string name="payees_blank">The payee needs a name</string>
+  <string name="payees_failed">Couldn\'t save the change</string>
+</resources>

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
@@ -41,6 +42,7 @@ internal fun EditBudgetSheet(
   category: CategoryState,
   month: YearMonth,
   isEnvelope: Boolean,
+  showBudget: Boolean,
   onDismiss: () -> Unit,
   onSave: (Amount) -> Unit,
   onMore: (CategoryAction) -> Unit,
@@ -86,53 +88,14 @@ internal fun EditBudgetSheet(
         )
       }
 
-      AktualTextField(
-        modifier = Modifier.fillMaxWidth(),
-        state = field,
-        placeholderText = ZERO_PLACEHOLDER,
-        singleLine = true,
-        keyboardOptions =
-          KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-        onKeyboardAction = { save() },
-        textStyle = typography.headlineSmall.tabularFigures().copy(color = colors.pageText),
-      )
-
-      Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        if (!category.isIncome) {
-          Text(
-            text = Strings.budgetingEditSpent(category.spent.formattedString()),
-            style = typography.bodySmall,
-            color = colors.pageTextSubdued,
-          )
-        }
-        Text(
-          text = Strings.budgetingEditLastMonth(category.lastMonthBudgeted.formattedString()),
-          style = typography.bodySmall,
-          color = colors.pageTextSubdued,
-        )
-      }
-
-      // Shortcuts upstream offers from a category's budget menu
-      FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-      ) {
-        BareTextButton(
-          text = Strings.budgetingEditUseLastMonth,
-          isEnabled = category.lastMonthBudgeted != Amount.Zero,
-          onClick = { field.setTextAndPlaceCursorAtEnd(category.lastMonthBudgeted.toInputText()) },
-        )
-        if (!category.isIncome) {
-          BareTextButton(
-            text = Strings.budgetingEditCoverSpending,
-            isEnabled = category.spent > Amount.Zero,
-            onClick = { field.setTextAndPlaceCursorAtEnd(category.spent.toInputText()) },
-          )
-        }
-        BareTextButton(
-          text = Strings.budgetingEditClear,
-          onClick = { field.setTextAndPlaceCursorAtEnd("") },
+      // Envelope income isn't budgeted, so only its options show
+      if (showBudget) {
+        BudgetEntry(
+          category = category,
+          field = field,
+          canSave = typed != null,
+          onSave = ::save,
+          onCancel = ::close,
         )
       }
 
@@ -140,26 +103,89 @@ internal fun EditBudgetSheet(
         category = category,
         isEnvelope = isEnvelope,
         onAction = { action ->
-          scope.launch { sheetState.hide() }.invokeOnCompletion { onMore(action) }
+          // Reordering keeps the sheet open, so a category can be moved several places
+          if (action is CategoryAction.Reorder) {
+            onMore(action)
+          } else {
+            scope.launch { sheetState.hide() }.invokeOnCompletion { onMore(action) }
+          }
         },
       )
+    }
+  }
+}
 
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-      ) {
-        NormalTextButton(
-          modifier = Modifier.weight(1f),
-          text = Strings.budgetingEditCancel,
-          onClick = ::close,
-        )
-        PrimaryTextButton(
-          modifier = Modifier.weight(1f),
-          text = Strings.budgetingEditSave,
-          isEnabled = typed != null,
-          onClick = ::save,
+@Composable
+private fun BudgetEntry(
+  category: CategoryState,
+  field: TextFieldState,
+  canSave: Boolean,
+  onSave: () -> Unit,
+  onCancel: () -> Unit,
+) {
+  Column(verticalArrangement = Arrangement.spacedBy(BudgetDS.sheetSpacing)) {
+    AktualTextField(
+      modifier = Modifier.fillMaxWidth(),
+      state = field,
+      placeholderText = ZERO_PLACEHOLDER,
+      singleLine = true,
+      keyboardOptions =
+        KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+      onKeyboardAction = { onSave() },
+      textStyle = typography.headlineSmall.tabularFigures().copy(color = colors.pageText),
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+      if (!category.isIncome) {
+        Text(
+          text = Strings.budgetingEditSpent(category.spent.formattedString()),
+          style = typography.bodySmall,
+          color = colors.pageTextSubdued,
         )
       }
+      Text(
+        text = Strings.budgetingEditLastMonth(category.lastMonthBudgeted.formattedString()),
+        style = typography.bodySmall,
+        color = colors.pageTextSubdued,
+      )
+    }
+
+    // Shortcuts upstream offers from a category's budget menu
+    FlowRow(
+      modifier = Modifier.fillMaxWidth(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      BareTextButton(
+        text = Strings.budgetingEditUseLastMonth,
+        isEnabled = category.lastMonthBudgeted != Amount.Zero,
+        onClick = { field.setTextAndPlaceCursorAtEnd(category.lastMonthBudgeted.toInputText()) },
+      )
+      if (!category.isIncome) {
+        BareTextButton(
+          text = Strings.budgetingEditCoverSpending,
+          isEnabled = category.spent > Amount.Zero,
+          onClick = { field.setTextAndPlaceCursorAtEnd(category.spent.toInputText()) },
+        )
+      }
+      BareTextButton(
+        text = Strings.budgetingEditClear,
+        onClick = { field.setTextAndPlaceCursorAtEnd("") },
+      )
+    }
+
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+      NormalTextButton(
+        modifier = Modifier.weight(1f),
+        text = Strings.budgetingEditCancel,
+        onClick = onCancel,
+      )
+      PrimaryTextButton(
+        modifier = Modifier.weight(1f),
+        text = Strings.budgetingEditSave,
+        isEnabled = canSave,
+        onClick = onSave,
+      )
     }
   }
 }

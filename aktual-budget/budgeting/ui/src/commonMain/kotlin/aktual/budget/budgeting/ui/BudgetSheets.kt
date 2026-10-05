@@ -1,8 +1,10 @@
 package aktual.budget.budgeting.ui
 
+import aktual.budget.budgeting.domain.Direction
 import aktual.budget.budgeting.vm.CategoryState
 import aktual.budget.budgeting.vm.GroupState
 import aktual.budget.model.Amount
+import aktual.budget.model.CategoryGroupId
 import aktual.budget.model.CategoryId
 import aktual.budget.model.parseAmountInput
 import aktual.budget.model.toInputText
@@ -52,10 +54,13 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
@@ -92,11 +97,41 @@ internal fun CategoryActions(
       subtitle = category.note?.lineSequence()?.firstOrNull(),
       onClick = { onAction(CategoryAction.Notes(category)) },
     )
+    ActionRow(
+      text = Strings.budgetingRename,
+      onClick = { onAction(CategoryAction.Rename(category)) },
+    )
+    ActionRow(
+      text = if (category.isHidden) Strings.budgetingUnhide else Strings.budgetingHide,
+      onClick = { onAction(CategoryAction.SetHidden(category, !category.isHidden)) },
+    )
+    ActionRow(
+      text = Strings.budgetingMoveUp,
+      onClick = { onAction(CategoryAction.Reorder(category, Direction.Up)) },
+    )
+    ActionRow(
+      text = Strings.budgetingMoveDown,
+      onClick = { onAction(CategoryAction.Reorder(category, Direction.Down)) },
+    )
+    ActionRow(
+      text = Strings.budgetingMoveToGroup,
+      onClick = { onAction(CategoryAction.MoveToGroup(category)) },
+    )
+    ActionRow(
+      text = Strings.budgetingDeleteCategory,
+      destructive = true,
+      onClick = { onAction(CategoryAction.Delete(category)) },
+    )
   }
 }
 
 @Composable
-private fun ActionRow(text: String, onClick: () -> Unit, subtitle: String? = null) {
+internal fun ActionRow(
+  text: String,
+  onClick: () -> Unit,
+  subtitle: String? = null,
+  destructive: Boolean = false,
+) {
   Row(
     modifier =
       Modifier.fillMaxWidth()
@@ -107,7 +142,11 @@ private fun ActionRow(text: String, onClick: () -> Unit, subtitle: String? = nul
     horizontalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     Column(modifier = Modifier.weight(1f)) {
-      Text(text = text, style = typography.bodyLarge)
+      Text(
+        text = text,
+        style = typography.bodyLarge,
+        color = if (destructive) colors.errorText else colors.pageText,
+      )
       if (!subtitle.isNullOrBlank()) {
         Text(
           text = subtitle,
@@ -553,3 +592,187 @@ private fun ConfirmButtons(
 private fun Amount.positiveOrZero(): Amount = if (this > Amount.Zero) this else Amount.Zero
 
 private val RoundedRow = RoundedCornerShape(8.dp)
+
+/** A name to give a new or renamed category or group */
+@Composable
+internal fun NameSheet(
+  title: String,
+  initial: String,
+  confirm: String,
+  onSave: (String) -> Unit,
+  onDismiss: () -> Unit,
+) {
+  val field = rememberTextFieldState(initialText = initial)
+  val canSave = field.text.isNotBlank() && field.text.toString().trim() != initial
+  BudgetSheetFrame(title = title, onDismiss = onDismiss) { close ->
+    AktualTextField(
+      modifier = Modifier.fillMaxWidth(),
+      state = field,
+      placeholderText = Strings.budgetingName,
+      singleLine = true,
+      keyboardOptions =
+        KeyboardOptions(
+          capitalization = KeyboardCapitalization.Sentences,
+          imeAction = ImeAction.Done,
+        ),
+      onKeyboardAction = {
+        if (canSave) {
+          val name = field.text.toString()
+          close {
+            onSave(name)
+            onDismiss()
+          }
+        }
+      },
+    )
+    ConfirmButtons(
+      confirm = confirm,
+      canConfirm = canSave,
+      onCancel = { close(onDismiss) },
+      onConfirm = {
+        val name = field.text.toString()
+        close {
+          onSave(name)
+          onDismiss()
+        }
+      },
+    )
+  }
+}
+
+/** A group's options, as upstream's group menu has them */
+@Composable
+internal fun GroupOptionsSheet(
+  group: GroupState,
+  onAddCategory: () -> Unit,
+  onRename: () -> Unit,
+  onVisibilityChange: (hidden: Boolean) -> Unit,
+  onReorder: (Direction) -> Unit,
+  onDelete: () -> Unit,
+  onDismiss: () -> Unit,
+) {
+  BudgetSheetFrame(title = group.name, onDismiss = onDismiss) { close ->
+    Column(modifier = Modifier.fillMaxWidth()) {
+      ActionRow(text = Strings.budgetingAddCategory, onClick = { close(onAddCategory) })
+      ActionRow(text = Strings.budgetingRename, onClick = { close(onRename) })
+      // The income group can't be hidden or deleted, as upstream doesn't allow it
+      if (!group.isIncome) {
+        ActionRow(
+          text = if (group.isHidden) Strings.budgetingUnhide else Strings.budgetingHide,
+          onClick = {
+            close {
+              onVisibilityChange(!group.isHidden)
+              onDismiss()
+            }
+          },
+        )
+      }
+      ActionRow(text = Strings.budgetingMoveUp, onClick = { onReorder(Direction.Up) })
+      ActionRow(text = Strings.budgetingMoveDown, onClick = { onReorder(Direction.Down) })
+      if (!group.isIncome) {
+        ActionRow(
+          text = Strings.budgetingDeleteGroup,
+          destructive = true,
+          onClick = { close(onDelete) },
+        )
+      }
+    }
+  }
+}
+
+/** Picks the group a category moves to */
+@Composable
+internal fun PickGroupSheet(
+  category: CategoryState,
+  groups: ImmutableList<GroupState>,
+  onPick: (CategoryGroupId) -> Unit,
+  onDismiss: () -> Unit,
+) {
+  BudgetSheetFrame(title = Strings.budgetingPickGroup(category.name), onDismiss = onDismiss) { close
+    ->
+    Column(modifier = Modifier.fillMaxWidth()) {
+      // Income categories stay among income groups, and expenses among expense groups
+      groups
+        .filter { it.isIncome == category.isIncome && category !in it.categories }
+        .forEach { group ->
+          ActionRow(
+            text = group.name,
+            onClick = {
+              close {
+                onPick(group.id)
+                onDismiss()
+              }
+            },
+          )
+        }
+    }
+  }
+}
+
+/**
+ * Confirms deleting a category or group. When it still has transactions or budgets, the money has
+ * to go to another category of the same kind first.
+ */
+@Composable
+internal fun DeleteSheet(
+  name: String,
+  isGroup: Boolean,
+  isIncome: Boolean,
+  needsTransfer: Boolean,
+  exclude: ImmutableSet<CategoryId>,
+  groups: ImmutableList<GroupState>,
+  onDelete: (transferTo: CategoryId?) -> Unit,
+  onDismiss: () -> Unit,
+) {
+  var to by remember { mutableStateOf<CategoryId?>(null) }
+  BudgetSheetFrame(
+    title = Strings.budgetingDeleteTitle(name),
+    subtitle =
+      when {
+        needsTransfer -> Strings.budgetingDeleteTransferMessage(name)
+        isGroup -> Strings.budgetingDeleteGroupMessage
+        else -> Strings.budgetingDeleteMessage
+      },
+    onDismiss = onDismiss,
+  ) { close ->
+    if (needsTransfer) {
+      Column(modifier = Modifier.fillMaxWidth()) {
+        groups
+          .filter { it.isIncome == isIncome }
+          .forEach { group ->
+            val options = group.categories.filter { it.id !in exclude }
+            if (options.isNotEmpty()) {
+              Text(
+                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp).semantics { heading() },
+                text = group.name.uppercase(),
+                style = typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.pageTextSubdued,
+              )
+            }
+            options.forEach { category ->
+              TargetRow(
+                text = category.name,
+                balance = null,
+                isSelected = to == category.id,
+                onClick = { to = category.id },
+              )
+            }
+          }
+      }
+    }
+    ConfirmButtons(
+      confirm =
+        if (needsTransfer) Strings.budgetingDeleteAndMove else Strings.budgetingDeleteConfirm,
+      canConfirm = !needsTransfer || to != null,
+      onCancel = { close(onDismiss) },
+      onConfirm = {
+        val target = to
+        close {
+          onDelete(target)
+          onDismiss()
+        }
+      },
+    )
+  }
+}

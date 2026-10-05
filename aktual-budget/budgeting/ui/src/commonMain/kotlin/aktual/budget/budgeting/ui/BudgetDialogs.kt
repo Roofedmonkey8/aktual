@@ -3,10 +3,14 @@ package aktual.budget.budgeting.ui
 import aktual.budget.budgeting.vm.BudgetContent
 import aktual.budget.budgeting.vm.BudgetState
 import aktual.budget.budgeting.vm.BudgetSummary
+import aktual.budget.budgeting.vm.DeleteTarget
+import aktual.budget.budgeting.vm.GroupState
 import aktual.core.l10n.Strings
 import aktual.core.ui.stringLong
 import androidx.compose.runtime.Composable
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 
 @Composable
 internal fun BudgetDialogs(
@@ -32,6 +36,7 @@ private fun LoadedDialog(
   val dismiss = { onOpen(null) }
   val groups = (content.expenseGroups + content.incomeGroups).toImmutableList()
   val categories = groups.flatMap { it.categories }.associateBy { it.id }
+  val groupsById = groups.associateBy { it.id }
   val envelope = content.summary as? BudgetSummary.Envelope
   val monthName = state.month.stringLong()
 
@@ -42,6 +47,7 @@ private fun LoadedDialog(
           category = category,
           month = state.month,
           isEnvelope = envelope != null,
+          showBudget = envelope == null || !category.isIncome,
           onDismiss = dismiss,
           onSave = { amount -> onAction(BudgetAction.SetBudget(category.id, amount)) },
           onMore = { action -> onCategoryAction(action, onAction, onOpen) },
@@ -120,6 +126,81 @@ private fun LoadedDialog(
       )
     }
 
+    BudgetDialog.NewGroup -> {
+      NameSheet(
+        title = Strings.budgetingNewGroupTitle,
+        initial = "",
+        confirm = Strings.budgetingAdd,
+        onSave = { onAction(BudgetAction.CreateGroup(it)) },
+        onDismiss = dismiss,
+      )
+    }
+
+    is BudgetDialog.GroupOptions -> {
+      groupsById[dialog.id]?.let { group ->
+        GroupOptionsSheet(
+          group = group,
+          onAddCategory = { onOpen(BudgetDialog.NewCategory(group.id)) },
+          onRename = { onOpen(BudgetDialog.RenameGroup(group.id)) },
+          onVisibilityChange = { onAction(BudgetAction.SetGroupHidden(group.id, it)) },
+          onReorder = { onAction(BudgetAction.MoveGroup(group.id, it)) },
+          onDelete = { onAction(BudgetAction.RequestDelete(DeleteTarget.Group(group.id))) },
+          onDismiss = dismiss,
+        )
+      }
+    }
+
+    is BudgetDialog.RenameGroup -> {
+      groupsById[dialog.id]?.let { group ->
+        NameSheet(
+          title = Strings.budgetingRenameTitle(group.name),
+          initial = group.name,
+          confirm = Strings.budgetingEditSave,
+          onSave = { onAction(BudgetAction.RenameGroup(group.id, it)) },
+          onDismiss = dismiss,
+        )
+      }
+    }
+
+    is BudgetDialog.NewCategory -> {
+      groupsById[dialog.group]?.let { group ->
+        NameSheet(
+          title = Strings.budgetingNewCategoryTitle(group.name),
+          initial = "",
+          confirm = Strings.budgetingAdd,
+          onSave = { onAction(BudgetAction.CreateCategory(it, group.id)) },
+          onDismiss = dismiss,
+        )
+      }
+    }
+
+    is BudgetDialog.RenameCategory -> {
+      categories[dialog.id]?.let { category ->
+        NameSheet(
+          title = Strings.budgetingRenameTitle(category.name),
+          initial = category.name,
+          confirm = Strings.budgetingEditSave,
+          onSave = { onAction(BudgetAction.RenameCategory(category.id, it)) },
+          onDismiss = dismiss,
+        )
+      }
+    }
+
+    is BudgetDialog.PickGroup -> {
+      categories[dialog.id]?.let { category ->
+        PickGroupSheet(
+          category = category,
+          groups = groups,
+          onPick = { onAction(BudgetAction.MoveCategoryToGroup(category.id, it)) },
+          onDismiss = dismiss,
+        )
+      }
+    }
+
+    is BudgetDialog.Delete -> {
+      DeleteDialog(dialog = dialog, groups = groups, onAction = onAction, onDismiss = dismiss)
+    }
+
     BudgetDialog.SetZero -> {
       ConfirmDialog(
         title = Strings.budgetingZeroTitle,
@@ -147,9 +228,64 @@ private fun onCategoryAction(
     is CategoryAction.Notes -> {
       onOpen(BudgetDialog.Notes(action.category.id))
     }
+    is CategoryAction.Rename -> {
+      onOpen(BudgetDialog.RenameCategory(action.category.id))
+    }
+    is CategoryAction.SetHidden -> {
+      onAction(BudgetAction.SetCategoryHidden(action.category.id, action.hidden))
+      onOpen(null)
+    }
+    is CategoryAction.Reorder -> {
+      onAction(BudgetAction.MoveCategory(action.category.id, action.direction))
+    }
+    is CategoryAction.MoveToGroup -> {
+      onOpen(BudgetDialog.PickGroup(action.category.id))
+    }
+    is CategoryAction.Delete -> {
+      onAction(BudgetAction.RequestDelete(DeleteTarget.Category(action.category.id)))
+    }
     is CategoryAction.SetRollover -> {
       onAction(BudgetAction.SetRollover(action.category.id, action.rollover))
       onOpen(null)
     }
+  }
+}
+
+@Composable
+private fun DeleteDialog(
+  dialog: BudgetDialog.Delete,
+  groups: ImmutableList<GroupState>,
+  onAction: BudgetActionHandler,
+  onDismiss: () -> Unit,
+) {
+  val target = dialog.target
+  val group =
+    when (target) {
+      is DeleteTarget.Group -> groups.firstOrNull { it.id == target.id }
+      is DeleteTarget.Category ->
+        groups.firstOrNull { g -> g.categories.any { it.id == target.id } }
+    }
+  val category =
+    (target as? DeleteTarget.Category)?.let { t ->
+      group?.categories?.firstOrNull { it.id == t.id }
+    }
+  val name = category?.name ?: group?.name
+  if (group != null && name != null) {
+    DeleteSheet(
+      name = name,
+      isGroup = target is DeleteTarget.Group,
+      isIncome = category?.isIncome ?: group.isIncome,
+      needsTransfer = dialog.needsTransfer,
+      // Money can't go to what's being deleted
+      exclude =
+        if (target is DeleteTarget.Group) {
+          group.categories.map { it.id }.toImmutableSet()
+        } else {
+          listOfNotNull(category?.id).toImmutableSet()
+        },
+      groups = groups,
+      onDelete = { to -> onAction(BudgetAction.Delete(target, to)) },
+      onDismiss = onDismiss,
+    )
   }
 }

@@ -9,6 +9,7 @@ import aktual.core.icons.Tag
 import aktual.core.icons.Tuning
 import aktual.core.icons.material.AccountBalance
 import aktual.core.icons.material.AccountBalanceWallet
+import aktual.core.icons.material.Badge
 import aktual.core.icons.material.Home
 import aktual.core.icons.material.Info
 import aktual.core.icons.material.LinearScale
@@ -25,6 +26,7 @@ import aktual.core.nav.BudgetNavKey
 import aktual.core.nav.BudgetNavRoute
 import aktual.core.nav.BudgetTab
 import aktual.core.nav.HomeNavRoute
+import aktual.core.nav.ListPayeesNavRoute
 import aktual.core.nav.ListRulesNavRoute
 import aktual.core.nav.ListSchedulesNavRoute
 import aktual.core.nav.ListTagsNavRoute
@@ -135,6 +137,7 @@ internal fun BudgetNavRail(
   val schedulesStack = stackWithDefault(ListSchedulesNavRoute)
   val rulesStack = stackWithDefault(ListRulesNavRoute)
   val tagsStack = stackWithDefault(ListTagsNavRoute)
+  val payeesStack = stackWithDefault(ListPayeesNavRoute)
   val bankSyncStack = stackWithDefault(BankSyncNavRoute)
 
   val tabStacks =
@@ -146,6 +149,7 @@ internal fun BudgetNavRail(
       schedulesStack,
       rulesStack,
       tagsStack,
+      payeesStack,
       bankSyncStack,
     ) {
       persistentMapOf(
@@ -156,6 +160,7 @@ internal fun BudgetNavRail(
         BudgetTab.Schedules to schedulesStack,
         BudgetTab.Rules to rulesStack,
         BudgetTab.Tags to tagsStack,
+        BudgetTab.Payees to payeesStack,
         BudgetTab.BankSync to bankSyncStack,
       )
     }
@@ -573,6 +578,7 @@ private fun BudgetTab.label(): String =
     Schedules -> Strings.listSchedulesTitle
     Rules -> Strings.rulesTitle
     Tags -> Strings.tagsTitle
+    BudgetTab.Payees -> Strings.payeesTitle
     BankSync -> Strings.bankSyncTitle
   }
 
@@ -586,11 +592,12 @@ private fun BudgetTab.icon(): ImageVector =
     Schedules -> AktualIcons.Calendar3
     Rules -> AktualIcons.Tuning
     Tags -> AktualIcons.Tag
+    BudgetTab.Payees -> MaterialIcons.Badge
     BankSync -> MaterialIcons.AccountBalance
   }
 
 // Less frequently used tabs, listed below the divider in the drawer and in the side rail's menu
-private val SecondaryTabs: ImmutableList<BudgetTab> = persistentListOf(BankSync)
+private val SecondaryTabs: ImmutableList<BudgetTab> = persistentListOf(BudgetTab.Payees, BankSync)
 
 private val PrimaryTabs: ImmutableList<BudgetTab> =
   BudgetTab.entries.filterNot { it in SecondaryTabs }.toImmutableList()

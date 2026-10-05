@@ -66,3 +66,10 @@ SELECT id, month FROM zero_budgets WHERE category = :category AND month >= :star
 
 reflectBudgetIdsFrom:
 SELECT id, month FROM reflect_budgets WHERE category = :category AND month >= :start;
+
+-- A category's budget in every month, for doTransfer() when it's deleted
+zeroBudgetsOf:
+SELECT id, month, amount FROM zero_budgets WHERE category = ?;
+
+reflectBudgetsOf:
+SELECT id, month, amount FROM reflect_budgets WHERE category = ?;

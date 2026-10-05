@@ -75,4 +75,31 @@
   <string name="budgeting_hold_confirm">Hold</string>
   <string name="budgeting_to_budget_actions">To budget options</string>
   <string name="budgeting_nothing_to_cover">Nothing has money left to cover this</string>
+
+  <string name="budgeting_menu_add_group">Add category group</string>
+  <string name="budgeting_rename">Rename</string>
+  <string name="budgeting_hide">Hide</string>
+  <string name="budgeting_unhide">Show again</string>
+  <string name="budgeting_move_up">Move up</string>
+  <string name="budgeting_move_down">Move down</string>
+  <string name="budgeting_move_to_group">Move to another group</string>
+  <string name="budgeting_add_category">Add category</string>
+  <string name="budgeting_delete_category">Delete category</string>
+  <string name="budgeting_delete_group">Delete group</string>
+  <string name="budgeting_new_group_title">New category group</string>
+  <string name="budgeting_new_category_title">New category in %1$s</string>
+  <string name="budgeting_rename_title">Rename %1$s</string>
+  <string name="budgeting_name">Name</string>
+  <string name="budgeting_add">Add</string>
+  <string name="budgeting_delete_title">Delete %1$s?</string>
+  <string name="budgeting_delete_message">This can't be undone.</string>
+  <string name="budgeting_delete_group_message">Every category in it will be deleted too. This can't be undone.</string>
+  <string name="budgeting_delete_transfer_message">%1$s has transactions or budgets. Pick a category to move them to.</string>
+  <string name="budgeting_delete_confirm">Delete</string>
+  <string name="budgeting_delete_and_move">Delete and move</string>
+  <string name="budgeting_pick_group">Move %1$s to</string>
+  <string name="budgeting_group_options">Options for %1$s</string>
+  <string name="budgeting_duplicate_name">%1$s already exists</string>
+  <string name="budgeting_blank_name">A name is needed</string>
+  <string name="budgeting_income_mismatch">Income and expense categories can't be mixed</string>
 </resources>

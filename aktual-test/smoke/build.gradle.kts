@@ -14,6 +14,7 @@ kotlin {
     implementation(project(":aktual-budget:budgeting:vm"))
     implementation(project(":aktual-budget:home:vm"))
     implementation(project(":aktual-budget:list:vm"))
+    implementation(project(":aktual-budget:payees:vm"))
     implementation(project(":aktual-budget:model"))
     implementation(project(":aktual-budget:reports:vm"))
     implementation(project(":aktual-budget:rules:vm"))

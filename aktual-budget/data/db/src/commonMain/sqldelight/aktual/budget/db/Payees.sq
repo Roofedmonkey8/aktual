@@ -54,3 +54,12 @@ pickerPayees:
     FROM v_payees
     WHERE tombstone = 0 AND name IS NOT NULL
     ORDER BY transfer_acct IS NOT NULL, name COLLATE NOCASE;
+
+-- Payees to manage, with how many live transactions each has. Transfer payees aren't editable,
+-- so they're left out
+managePayees:
+  SELECT p.id, p.name, p.favorite, p.learn_categories,
+    (SELECT COUNT(*) FROM v_transactions_internal_alive t WHERE t.payee = p.id) AS transactions
+    FROM payees p
+    WHERE p.tombstone = 0 AND p.transfer_acct IS NULL AND p.name IS NOT NULL
+    ORDER BY p.name COLLATE NOCASE;
