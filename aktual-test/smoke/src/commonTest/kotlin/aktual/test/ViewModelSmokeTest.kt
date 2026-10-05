@@ -25,6 +25,8 @@ import aktual.budget.tags.vm.edit.EditTagViewModel
 import aktual.budget.tags.vm.list.ListTagsViewModel
 import aktual.budget.tags.vm.search.SearchTagsViewModel
 import aktual.budget.transactions.vm.TransactionsViewModel
+import aktual.budget.transactions.vm.edit.EditTransactionSpec
+import aktual.budget.transactions.vm.edit.EditTransactionViewModel
 import aktual.core.theme.DarkColors
 import aktual.metrics.vm.MetricsViewModel
 import aktual.prefs.vm.inspect.InspectThemeViewModel
@@ -178,6 +180,12 @@ abstract class ViewModelSmokeTest<G : TestAppGraph> {
   @Test
   fun syncBudget() =
     testAssistedVM<SyncBudgetViewModel, SyncBudgetViewModel.Factory> { create(BUDGET_ID) }
+
+  @Test
+  fun editTransaction() =
+    testAssistedVM<EditTransactionViewModel, EditTransactionViewModel.Factory> {
+      create(EditTransactionSpec.Create(account = null))
+    }
 
   @Test
   fun transactions() =

@@ -1,5 +1,6 @@
 package aktual.budget.transactions.ui
 
+import aktual.budget.model.TransactionId
 import aktual.budget.model.TransactionsDensity
 import aktual.budget.transactions.vm.Transaction
 import aktual.core.icons.material.MaterialIcons
@@ -15,6 +16,7 @@ import aktual.core.ui.PortraitPreview
 import aktual.core.ui.PreviewWithColoredParams
 import aktual.core.ui.scrollbar
 import alakazam.compose.VerticalSpacer
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,6 +46,7 @@ internal fun Transactions(
   innerPadding: PaddingValues,
   contentPadding: PaddingValues,
   modifier: Modifier = Modifier,
+  onOpen: (TransactionId) -> Unit = {},
 ) {
   val refresh = pagingItems.loadState.refresh
   when {
@@ -55,6 +58,7 @@ internal fun Transactions(
         modifier = modifier,
         contentPadding = contentPadding,
         innerPadding = innerPadding,
+        onOpen = onOpen,
       )
     }
 
@@ -120,7 +124,9 @@ private fun TransactionsFilled(
   innerPadding: PaddingValues,
   contentPadding: PaddingValues,
   modifier: Modifier = Modifier,
+  onOpen: (TransactionId) -> Unit = {},
 ) {
+  val openLabel = Strings.editTransactionTitle
   LazyColumn(
     modifier = modifier.fillMaxSize().scrollbar(listState),
     state = listState,
@@ -133,7 +139,12 @@ private fun TransactionsFilled(
       if (transaction != null) {
         val showDate = index == 0 || pagingItems.peek(index - 1)?.date != transaction.date
 
-        Column(modifier = Modifier.fillMaxWidth().animateItem()) {
+        Column(
+          modifier =
+            Modifier.fillMaxWidth().animateItem().clickable(onClickLabel = openLabel) {
+              onOpen(transaction.id)
+            }
+        ) {
           // A hairline between days, or between every row when dense
           if (index > 0 && (showDate || density == Dense)) {
             HorizontalDivider(color = colors.tableBorder)

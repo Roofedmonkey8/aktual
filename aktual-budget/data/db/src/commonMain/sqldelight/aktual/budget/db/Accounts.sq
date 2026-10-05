@@ -84,3 +84,10 @@ SELECT MAX(sort_order) AS sort_order FROM accounts WHERE offbudget = ? AND tombs
 insert:
 INSERT INTO accounts(id, account_id, name, official_name, bank, offbudget, account_sync_source)
   VALUES (?, ?, ?, ?, ?, ?, ?);
+
+-- Accounts to pick from when editing a transaction, on-budget first
+pickerAccounts:
+  SELECT id, name, offbudget
+    FROM accounts
+    WHERE tombstone = 0 AND closed = 0
+    ORDER BY offbudget, sort_order, name;

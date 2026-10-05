@@ -54,3 +54,11 @@ categories:
     FROM categories
     WHERE tombstone = 0
     ORDER BY sort_order, id;
+
+-- Categories to pick from when editing a transaction, in budget order with income last
+pickerCategories:
+  SELECT c.id, c.name, c.is_income, g.id AS group_id, g.name AS group_name
+    FROM categories c
+    JOIN category_groups g ON g.id = c.cat_group AND g.tombstone = 0
+    WHERE c.tombstone = 0 AND c.hidden = 0 AND g.hidden = 0
+    ORDER BY g.is_income, g.sort_order, g.id, c.sort_order, c.id;

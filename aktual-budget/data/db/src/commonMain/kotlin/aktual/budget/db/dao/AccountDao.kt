@@ -5,6 +5,7 @@ import aktual.budget.db.BudgetDatabase
 import aktual.budget.db.GetAllWithBalances
 import aktual.budget.db.GetAllWithStatus
 import aktual.budget.db.GetBankSyncAccounts
+import aktual.budget.db.PickerAccounts
 import aktual.budget.db.accounts.GetAllActive
 import aktual.budget.db.withResult
 import aktual.budget.db.withoutResult
@@ -82,5 +83,9 @@ class AccountDao(database: BudgetDatabase) {
   // accounts
   suspend fun nameMap(): Map<AccountId, String?> = queries.withResult {
     getAllNames().awaitAsList().associate { it.id to it.name }
+  }
+
+  suspend fun pickerAccounts(): List<PickerAccounts> = queries.withResult {
+    pickerAccounts().awaitAsList()
   }
 }

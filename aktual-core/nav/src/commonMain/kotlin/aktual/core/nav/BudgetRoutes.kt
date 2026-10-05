@@ -5,6 +5,7 @@ import aktual.budget.model.DashboardPageId
 import aktual.budget.model.RuleId
 import aktual.budget.model.ScheduleId
 import aktual.budget.model.TagId
+import aktual.budget.model.TransactionId
 import aktual.budget.model.WidgetId
 import kotlinx.serialization.Serializable
 
@@ -23,6 +24,12 @@ import kotlinx.serialization.Serializable
 @Serializable data class AccountTransactionsNavRoute(val id: AccountId) : BudgetNavKey.Transactions
 
 @Serializable data object UncategorisedTransactionsNavRoute : BudgetNavKey.Transactions
+
+// A new transaction, in the given account if it was started from one
+@Serializable
+data class CreateTransactionNavRoute(val account: AccountId?) : BudgetNavKey.Transactions
+
+@Serializable data class EditTransactionNavRoute(val id: TransactionId) : BudgetNavKey.Transactions
 
 @Serializable data object ReportsListNavRoute : BudgetNavKey.Reports
 

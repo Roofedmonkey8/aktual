@@ -2,9 +2,11 @@ package aktual.budget.db.dao
 
 import aktual.budget.db.BudgetDatabase
 import aktual.budget.db.Payees
+import aktual.budget.db.PickerPayees
 import aktual.budget.db.payees.GetAllActive
 import aktual.budget.db.withResult
 import aktual.budget.db.withoutResult
+import aktual.budget.model.AccountId
 import aktual.budget.model.PayeeId
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
@@ -47,5 +49,14 @@ class PayeeDao(database: BudgetDatabase) {
 
   suspend fun getAllActive(): List<GetAllActive> = queries.withResult {
     getAllActive().awaitAsList()
+  }
+
+  /** The payee that stands for transfers to or from [account] */
+  suspend fun transferPayee(account: AccountId): PayeeId? = queries.withResult {
+    getByTransferAccount(account).awaitAsOneOrNull()
+  }
+
+  suspend fun pickerPayees(): List<PickerPayees> = queries.withResult {
+    pickerPayees().awaitAsList()
   }
 }

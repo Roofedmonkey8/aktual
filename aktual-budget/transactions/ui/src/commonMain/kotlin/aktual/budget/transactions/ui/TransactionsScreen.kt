@@ -1,13 +1,19 @@
 package aktual.budget.transactions.ui
 
 import aktual.budget.banksync.ui.showBankSyncSummary
+import aktual.budget.model.AccountSpec
 import aktual.budget.model.Amount
 import aktual.budget.model.TransactionsDensity
 import aktual.budget.model.TransactionsSpec
 import aktual.budget.transactions.vm.LoadedAccount
 import aktual.budget.transactions.vm.Transaction
 import aktual.budget.transactions.vm.TransactionsViewModel
+import aktual.core.icons.material.Add
+import aktual.core.icons.material.MaterialIcons
+import aktual.core.l10n.Strings
 import aktual.core.nav.BackNavigator
+import aktual.core.nav.EditTransactionNavigator
+import aktual.core.ui.AktualTheme.colors
 import aktual.core.ui.ColoredParams
 import aktual.core.ui.DesktopPreview
 import aktual.core.ui.HazedPullToRefreshBox
@@ -24,6 +30,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -45,6 +53,7 @@ import kotlinx.coroutines.flow.Flow
 fun TransactionsScreen(
   back: BackNavigator,
   spec: TransactionsSpec,
+  editTransaction: EditTransactionNavigator,
   isRoot: Boolean = false,
   viewModel: TransactionsViewModel = metroViewModel(spec),
 ) {
@@ -73,6 +82,9 @@ fun TransactionsScreen(
       when (action) {
         NavBack -> back()
         BankSync -> viewModel.bankSync()
+        AddTransaction ->
+          editTransaction.create((spec.accountSpec as? AccountSpec.SpecificAccount)?.id)
+        is OpenTransaction -> editTransaction(action.id)
         is SetPrivacyMode -> viewModel.setPrivacyMode(action.isPrivacyEnabled)
         is SetDensity -> viewModel.setDensity(action.density)
       }
@@ -122,6 +134,16 @@ internal fun TransactionsScaffold(
           if (density == Dense) LedgerHeader()
         }
       },
+      floatingActionButton = {
+        FloatingActionButton(
+          modifier = Modifier.padding(bottom = LocalBottomSpacing.current),
+          onClick = { onAction(AddTransaction) },
+          containerColor = colors.buttonPrimaryBackground,
+          contentColor = colors.buttonPrimaryText,
+        ) {
+          Icon(imageVector = MaterialIcons.Add, contentDescription = Strings.transactionsAdd)
+        }
+      },
       snackbarHost = {
         SnackbarHost(
           hostState = snackbarHostState,
@@ -146,6 +168,7 @@ internal fun TransactionsScaffold(
             pagingItems = pagingItems,
             density = density,
             innerPadding = innerPadding,
+            onOpen = { id -> onAction(Action.OpenTransaction(id)) },
           )
         }
       }

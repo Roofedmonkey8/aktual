@@ -44,3 +44,13 @@ insert:
   INSERT OR REPLACE
     INTO payees(id, name, category, tombstone, transfer_acct, favorite, learn_categories)
     VALUES(?,?,?,?,?,?,?);
+
+-- packages/loot-core/src/server/transactions/transfer.ts getPayee()
+getByTransferAccount: SELECT id FROM payees WHERE transfer_acct = ? AND tombstone = 0 LIMIT 1;
+
+-- Payees to pick from when editing a transaction, transfer payees last
+pickerPayees:
+  SELECT id, name, transfer_acct
+    FROM v_payees
+    WHERE tombstone = 0 AND name IS NOT NULL
+    ORDER BY transfer_acct IS NOT NULL, name COLLATE NOCASE;

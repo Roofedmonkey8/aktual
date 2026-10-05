@@ -6,6 +6,7 @@ import aktual.budget.model.DashboardPageId
 import aktual.budget.model.RuleId
 import aktual.budget.model.ScheduleId
 import aktual.budget.model.TagId
+import aktual.budget.model.TransactionId
 import aktual.budget.model.WidgetId
 import androidx.compose.runtime.Immutable
 
@@ -112,4 +113,11 @@ class BankSyncProvidersNavigator(private val stack: NavStack<BudgetNavKey>) {
 class BankSyncProviderSetupNavigator(private val stack: NavStack<BudgetNavKey>) {
   operator fun invoke(source: AccountSyncSource) =
     stack.push(BankSyncProviderSetupNavRoute(source.value))
+}
+
+@Immutable
+class EditTransactionNavigator(private val stack: NavStack<BudgetNavKey>) {
+  operator fun invoke(id: TransactionId) = stack.push(EditTransactionNavRoute(id))
+
+  fun create(account: AccountId? = null) = stack.push(CreateTransactionNavRoute(account))
 }
