@@ -22,7 +22,8 @@ internal class BudgetContentTest {
   @Test
   fun `Spending shows as positive and income as received`() {
     val content =
-      overview(FOOD_SPENT_50, SALARY).toContent(PREVIOUS, emptySet(), showHidden = false)
+      LoadedMonth(overview(FOOD_SPENT_50, SALARY), PREVIOUS)
+        .toContent(emptySet(), showHidden = false)
 
     assertThat(content).isInstanceOf<BudgetContent.Loaded>().all {
       prop(BudgetContent.Loaded::expenseGroups)
@@ -44,7 +45,8 @@ internal class BudgetContentTest {
   @Test
   fun `Envelope summary turns overspending into a positive figure`() {
     val content =
-      overview(FOOD_SPENT_50, SALARY).toContent(PREVIOUS, emptySet(), showHidden = false)
+      LoadedMonth(overview(FOOD_SPENT_50, SALARY), PREVIOUS)
+        .toContent(emptySet(), showHidden = false)
 
     assertThat(content)
       .isInstanceOf<BudgetContent.Loaded>()
@@ -62,7 +64,7 @@ internal class BudgetContentTest {
     val hidden = FOOD_SPENT_50.copy(id = CategoryId("secret"), isHidden = true)
     val month = overview(FOOD_SPENT_50, hidden, SALARY, hiddenGroup = SALARY.group)
 
-    val hiding = month.toContent(PREVIOUS, emptySet(), showHidden = false)
+    val hiding = LoadedMonth(month, PREVIOUS).toContent(emptySet(), showHidden = false)
     assertThat(hiding).isInstanceOf<BudgetContent.Loaded>().all {
       prop(BudgetContent.Loaded::expenseGroups)
         .transform { groups -> groups.flatMap { it.categories }.map { it.id } }
@@ -70,7 +72,7 @@ internal class BudgetContentTest {
       prop(BudgetContent.Loaded::incomeGroups).transform { it.size }.isEqualTo(0)
     }
 
-    val showing = month.toContent(PREVIOUS, emptySet(), showHidden = true)
+    val showing = LoadedMonth(month, PREVIOUS).toContent(emptySet(), showHidden = true)
     assertThat(showing).isInstanceOf<BudgetContent.Loaded>().all {
       prop(BudgetContent.Loaded::expenseGroups)
         .transform { groups -> groups.flatMap { it.categories }.map { it.id } }
@@ -82,7 +84,8 @@ internal class BudgetContentTest {
   @Test
   fun `Collapsed groups are marked`() {
     val content =
-      overview(FOOD_SPENT_50, SALARY).toContent(PREVIOUS, setOf(BILLS), showHidden = false)
+      LoadedMonth(overview(FOOD_SPENT_50, SALARY), PREVIOUS)
+        .toContent(setOf(BILLS), showHidden = false)
 
     assertThat(content).isInstanceOf<BudgetContent.Loaded>().all {
       prop(BudgetContent.Loaded::expenseGroups)
@@ -101,7 +104,7 @@ internal class BudgetContentTest {
         month = envelope(),
         groups = persistentListOf(BudgetGroup(BILLS, "Bills", false, false, persistentListOf())),
       )
-    assertThat(empty.toContent(PREVIOUS, emptySet(), showHidden = false))
+    assertThat(LoadedMonth(empty, PREVIOUS).toContent(emptySet(), showHidden = false))
       .isEqualTo(BudgetContent.Empty)
   }
 

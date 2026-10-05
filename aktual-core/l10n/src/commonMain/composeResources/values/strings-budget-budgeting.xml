@@ -38,4 +38,41 @@
 
   <string name="budgeting_empty">No categories yet</string>
   <string name="budgeting_empty_second">Add categories in Actual and they\'ll show up here after syncing</string>
+
+  <string name="budgeting_menu_copy_last_month">Copy last month's budget</string>
+  <string name="budgeting_menu_set_zero">Set all budgets to zero</string>
+  <string name="budgeting_menu_hold">Hold for next month</string>
+  <string name="budgeting_menu_reset_hold">Reset next month's hold</string>
+  <string name="budgeting_menu_month_notes">Notes for this month</string>
+  <string name="budgeting_copy_title">Copy last month's budget?</string>
+  <string name="budgeting_copy_message">Every visible category's budget for %1$s will be replaced with what was budgeted the month before.</string>
+  <string name="budgeting_zero_title">Set all budgets to zero?</string>
+  <string name="budgeting_zero_message">Every category's budget for %1$s will be cleared.</string>
+  <string name="budgeting_confirm">Replace</string>
+  <string name="budgeting_clear_confirm">Clear</string>
+
+  <string name="budgeting_move_money">Move money</string>
+  <string name="budgeting_move_from_to_budget">Budget from To Budget</string>
+  <string name="budgeting_move_title">Move from %1$s</string>
+  <string name="budgeting_move_to">To</string>
+  <string name="budgeting_move_from">From</string>
+  <string name="budgeting_move_amount_hint">%1$s available</string>
+  <string name="budgeting_move_confirm">Move</string>
+  <string name="budgeting_to_budget_name">To Budget</string>
+  <string name="budgeting_cover">Cover overspending</string>
+  <string name="budgeting_cover_title">Cover %1$s overspent in %2$s</string>
+  <string name="budgeting_cover_from">Take it from</string>
+  <string name="budgeting_rollover">Rollover overspending</string>
+  <string name="budgeting_rollover_tracking">Rollover balance</string>
+  <string name="budgeting_rollover_hint">From this month on</string>
+  <string name="budgeting_notes">Notes</string>
+  <string name="budgeting_notes_title">Notes for %1$s</string>
+  <string name="budgeting_notes_placeholder">Add a note</string>
+  <string name="budgeting_rollover_on">Rollover on</string>
+  <string name="budgeting_has_note">Has a note</string>
+  <string name="budgeting_hold_title">Hold for next month</string>
+  <string name="budgeting_hold_hint">Up to %1$s can be held</string>
+  <string name="budgeting_hold_confirm">Hold</string>
+  <string name="budgeting_to_budget_actions">To budget options</string>
+  <string name="budgeting_nothing_to_cover">Nothing has money left to cover this</string>
 </resources>

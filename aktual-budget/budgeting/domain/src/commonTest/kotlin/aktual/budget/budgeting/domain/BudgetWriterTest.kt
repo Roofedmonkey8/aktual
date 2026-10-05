@@ -16,6 +16,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.prop
 import kotlin.test.Test
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.YearMonth
 
 internal class BudgetWriterTest {
@@ -45,6 +46,31 @@ internal class BudgetWriterTest {
   fun `December is stored as month 12`() {
     val changes = budgetChanges(ZERO_BUDGETS, null, YearMonth(2025, 12), FOOD, Amount(1L))
     assertThat(changes.first().row).isEqualTo("202512-food")
+  }
+
+  @Test
+  fun `Rollover on a new row creates it with the flag set`() {
+    assertThat(carryoverChanges(ZERO_BUDGETS, existingId = null, MARCH, FOOD, flag = true))
+      .containsExactly(
+        LocalChange(ZERO_BUDGETS, "202603-food", "month", MessageValue.Number(202603L)),
+        LocalChange(ZERO_BUDGETS, "202603-food", "category", MessageValue.String("food")),
+        LocalChange(ZERO_BUDGETS, "202603-food", "carryover", MessageValue.Number(1L)),
+      )
+    assertThat(carryoverChanges(ZERO_BUDGETS, "row", MARCH, FOOD, flag = false))
+      .containsExactly(LocalChange(ZERO_BUDGETS, "row", "carryover", MessageValue.Number(0L)))
+  }
+
+  @Test
+  fun `Moving money is noted in upstream's words`() {
+    val movement =
+      Movement(Amount(123_456L), from = "Food", to = "To Budget", date = LocalDate(2026, 10, 5))
+    assertThat(movement.text()).isEqualTo("Reassigned 1,234.56 from Food → To Budget on October 05")
+  }
+
+  @Test
+  fun `Budget months run a year ahead`() {
+    assertThat(lastBudgetMonth(MARCH)).isEqualTo(YearMonth(2027, 3))
+    assertThat(monthNoteId(MARCH)).isEqualTo("budget-2026-03")
   }
 
   @Test

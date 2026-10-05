@@ -59,3 +59,10 @@ SELECT id FROM zero_budgets WHERE month = :month AND category = :category LIMIT 
 
 reflectBudgetId:
 SELECT id FROM reflect_budgets WHERE month = :month AND category = :category LIMIT 1;
+
+-- The budget rows set for a category from a month on, for setCategoryCarryover()
+zeroBudgetIdsFrom:
+SELECT id, month FROM zero_budgets WHERE category = :category AND month >= :start;
+
+reflectBudgetIdsFrom:
+SELECT id, month FROM reflect_budgets WHERE category = :category AND month >= :start;

@@ -1,9 +1,19 @@
 package aktual.budget.budgeting.ui
 
+import aktual.budget.budgeting.ui.BudgetAction.CopyLastMonth
+import aktual.budget.budgeting.ui.BudgetAction.CoverOverspending
 import aktual.budget.budgeting.ui.BudgetAction.EditBudget
+import aktual.budget.budgeting.ui.BudgetAction.Hold
+import aktual.budget.budgeting.ui.BudgetAction.MoveMoney
 import aktual.budget.budgeting.ui.BudgetAction.NextMonth
+import aktual.budget.budgeting.ui.BudgetAction.Open
 import aktual.budget.budgeting.ui.BudgetAction.PreviousMonth
 import aktual.budget.budgeting.ui.BudgetAction.Refresh
+import aktual.budget.budgeting.ui.BudgetAction.ResetHold
+import aktual.budget.budgeting.ui.BudgetAction.SetAllToZero
+import aktual.budget.budgeting.ui.BudgetAction.SetBudget
+import aktual.budget.budgeting.ui.BudgetAction.SetNote
+import aktual.budget.budgeting.ui.BudgetAction.SetRollover
 import aktual.budget.budgeting.ui.BudgetAction.SetShowHidden
 import aktual.budget.budgeting.ui.BudgetAction.ThisMonth
 import aktual.budget.budgeting.ui.BudgetAction.ToggleGroup
@@ -14,6 +24,7 @@ import aktual.budget.budgeting.vm.BudgetSummary
 import aktual.budget.budgeting.vm.BudgetViewModel
 import aktual.budget.budgeting.vm.CategoryState
 import aktual.budget.budgeting.vm.GroupState
+import aktual.budget.model.Amount
 import aktual.core.icons.material.CalendarToday
 import aktual.core.icons.material.ChevronLeft
 import aktual.core.icons.material.ChevronRight
@@ -72,7 +83,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
@@ -106,40 +116,37 @@ internal fun BudgetScreen(
     }
   }
 
-  // Held by ID, so the sheet shows fresh figures if a sync lands while it's open
-  var editingId by rememberSaveable { mutableStateOf<String?>(null) }
-  val editing =
-    (state.content as? BudgetContent.Loaded)?.let { content ->
-      (content.expenseGroups + content.incomeGroups)
-        .flatMap { it.categories }
-        .firstOrNull { it.id.value == editingId }
+  var dialog by remember { mutableStateOf<BudgetDialog?>(null) }
+  val onAction = BudgetActionHandler { action ->
+    when (action) {
+      PreviousMonth -> viewModel.previousMonth()
+      NextMonth -> viewModel.nextMonth()
+      ThisMonth -> viewModel.thisMonth()
+      Refresh -> viewModel.refresh()
+      is SetShowHidden -> viewModel.setShowHidden(action.show)
+      is ToggleGroup -> viewModel.toggleGroup(action.id)
+      is EditBudget -> dialog = BudgetDialog.Category(action.category.id)
+      is Open -> dialog = action.dialog
+      is SetBudget -> viewModel.setBudget(action.category, action.amount)
+      is MoveMoney -> viewModel.moveMoney(action.from, action.to, action.amount)
+      is CoverOverspending -> viewModel.coverOverspending(action.category, action.from)
+      is SetRollover -> viewModel.setRollover(action.category, action.rollover)
+      is SetNote -> viewModel.setNote(action.category, action.note)
+      is Hold -> viewModel.holdForNextMonth(action.amount)
+      ResetHold -> viewModel.resetHold()
+      CopyLastMonth -> viewModel.copyLastMonth()
+      SetAllToZero -> viewModel.setAllToZero()
     }
+  }
 
   BudgetScaffold(
     modifier = modifier,
     state = state,
     snackbarHostState = snackbar,
-    onAction = { action ->
-      when (action) {
-        PreviousMonth -> viewModel.previousMonth()
-        NextMonth -> viewModel.nextMonth()
-        ThisMonth -> viewModel.thisMonth()
-        Refresh -> viewModel.refresh()
-        is SetShowHidden -> viewModel.setShowHidden(action.show)
-        is ToggleGroup -> viewModel.toggleGroup(action.id)
-        is EditBudget -> editingId = action.category.id.value
-      }
-    },
+    onAction = onAction,
   )
 
-  if (editing != null) {
-    EditBudgetSheet(
-      category = editing,
-      month = state.month,
-      onDismiss = { editingId = null },
-      onSave = { amount -> viewModel.setBudget(editing.id, amount) },
-    )
-  }
+  BudgetDialogs(dialog = dialog, state = state, onAction = onAction)
 }
 
 @Composable
@@ -255,6 +262,41 @@ private fun BudgetMenu(state: BudgetState, onAction: BudgetActionHandler) {
     )
 
     AktualDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+      val loaded = state.content as? BudgetContent.Loaded
+      val envelope = loaded?.summary as? BudgetSummary.Envelope
+      fun open(dialog: BudgetDialog) {
+        expanded = false
+        onAction(Open(dialog))
+      }
+      if (loaded != null) {
+        AktualDropdownMenuItem(
+          text = Strings.budgetingMenuCopyLastMonth,
+          onClick = { open(BudgetDialog.CopyLastMonth) },
+        )
+        AktualDropdownMenuItem(
+          text = Strings.budgetingMenuSetZero,
+          onClick = { open(BudgetDialog.SetZero) },
+        )
+        if (envelope != null && envelope.toBudget > Amount.Zero) {
+          AktualDropdownMenuItem(
+            text = Strings.budgetingMenuHold,
+            onClick = { open(BudgetDialog.Hold) },
+          )
+        }
+        if (envelope != null && envelope.forNextMonth > Amount.Zero) {
+          AktualDropdownMenuItem(
+            text = Strings.budgetingMenuResetHold,
+            onClick = {
+              expanded = false
+              onAction(ResetHold)
+            },
+          )
+        }
+        AktualDropdownMenuItem(
+          text = Strings.budgetingMenuMonthNotes,
+          onClick = { open(BudgetDialog.Notes(id = null)) },
+        )
+      }
       AktualDropdownMenuItem(
         text = if (state.showHidden) Strings.budgetingHideHidden else Strings.budgetingShowHidden,
         leadingIcon =
@@ -308,7 +350,12 @@ private fun BudgetContentView(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(BudgetDS.sectionSpacing),
       ) {
-        item(key = "summary") { SummaryCard(summary = content.summary) }
+        item(key = "summary") {
+          SummaryCard(
+            summary = content.summary,
+            onClick = { onAction(Open(BudgetDialog.ToBudget)) },
+          )
+        }
 
         val isTracking = content.summary is BudgetSummary.Tracking
         section(

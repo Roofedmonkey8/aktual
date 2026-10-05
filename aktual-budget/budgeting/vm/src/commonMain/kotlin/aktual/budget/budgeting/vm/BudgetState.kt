@@ -14,6 +14,7 @@ data class BudgetState(
   val showHidden: Boolean,
   val isRefreshing: Boolean,
   val content: BudgetContent,
+  val monthNote: String? = null,
 )
 
 @Immutable
@@ -79,6 +80,9 @@ data class CategoryState(
   val spent: Amount,
   val balance: Amount,
   val lastMonthBudgeted: Amount,
+  // Envelope: overspending carries into next month. Tracking: the balance does.
+  val rollover: Boolean = false,
+  val note: String? = null,
 )
 
 sealed interface BudgetEvent {

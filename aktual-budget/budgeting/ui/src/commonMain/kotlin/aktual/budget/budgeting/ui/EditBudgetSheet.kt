@@ -28,12 +28,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -44,8 +40,10 @@ import kotlinx.datetime.YearMonth
 internal fun EditBudgetSheet(
   category: CategoryState,
   month: YearMonth,
+  isEnvelope: Boolean,
   onDismiss: () -> Unit,
   onSave: (Amount) -> Unit,
+  onMore: (CategoryAction) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   // Fully open only, so the sheet stays above the keyboard
@@ -53,7 +51,6 @@ internal fun EditBudgetSheet(
     rememberBottomSheetState(initialValue = Hidden, enabledValues = setOf(Hidden, Expanded))
   val scope = rememberCoroutineScope()
   val field = rememberTextFieldState(initialText = category.budgeted.toInputText())
-  val focusRequester = remember { FocusRequester() }
   val typed = parseAmountInput(field.text.toString())
 
   fun close() {
@@ -65,8 +62,6 @@ internal fun EditBudgetSheet(
     if (amount != category.budgeted) onSave(amount)
     close()
   }
-
-  LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
   ModalBottomSheet(
     modifier = modifier,
@@ -92,7 +87,7 @@ internal fun EditBudgetSheet(
       }
 
       AktualTextField(
-        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+        modifier = Modifier.fillMaxWidth(),
         state = field,
         placeholderText = ZERO_PLACEHOLDER,
         singleLine = true,
@@ -141,6 +136,14 @@ internal fun EditBudgetSheet(
         )
       }
 
+      CategoryActions(
+        category = category,
+        isEnvelope = isEnvelope,
+        onAction = { action ->
+          scope.launch { sheetState.hide() }.invokeOnCompletion { onMore(action) }
+        },
+      )
+
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -161,4 +164,4 @@ internal fun EditBudgetSheet(
   }
 }
 
-private const val ZERO_PLACEHOLDER = "0.00"
+internal const val ZERO_PLACEHOLDER = "0.00"

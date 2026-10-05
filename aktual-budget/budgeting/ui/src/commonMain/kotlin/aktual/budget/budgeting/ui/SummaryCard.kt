@@ -11,6 +11,7 @@ import aktual.core.ui.formattedString
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,8 +37,19 @@ import com.valentinilk.shimmer.rememberShimmer
 import com.valentinilk.shimmer.shimmer
 
 @Composable
-internal fun SummaryCard(summary: BudgetSummary, modifier: Modifier = Modifier) {
-  SummaryCardFrame(modifier = modifier) {
+internal fun SummaryCard(
+  summary: BudgetSummary,
+  modifier: Modifier = Modifier,
+  onClick: () -> Unit = {},
+) {
+  // Envelope budgets open upstream's to-budget menu: budget it, or hold it for next month
+  val clickable =
+    if (summary is BudgetSummary.Envelope) {
+      Modifier.clickable(onClickLabel = Strings.budgetingToBudgetActions, onClick = onClick)
+    } else {
+      Modifier
+    }
+  SummaryCardFrame(modifier = modifier, clickableModifier = clickable) {
     when (summary) {
       is BudgetSummary.Envelope -> EnvelopeSummary(summary)
       is BudgetSummary.Tracking -> TrackingSummary(summary)
@@ -46,7 +58,11 @@ internal fun SummaryCard(summary: BudgetSummary, modifier: Modifier = Modifier) 
 }
 
 @Composable
-private fun SummaryCardFrame(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+private fun SummaryCardFrame(
+  modifier: Modifier = Modifier,
+  clickableModifier: Modifier = Modifier,
+  content: @Composable () -> Unit,
+) {
   Column(
     modifier =
       modifier
@@ -54,6 +70,7 @@ private fun SummaryCardFrame(modifier: Modifier = Modifier, content: @Composable
         .clip(RounderCardShape)
         .background(colors.tableBackground, RounderCardShape)
         .border(Hairline, colors.tableBorder, RounderCardShape)
+        .then(clickableModifier)
         .padding(BudgetDS.cardPadding),
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {

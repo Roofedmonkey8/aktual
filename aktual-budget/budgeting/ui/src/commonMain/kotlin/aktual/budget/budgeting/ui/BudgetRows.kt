@@ -5,6 +5,7 @@ import aktual.budget.budgeting.vm.GroupState
 import aktual.budget.model.Amount
 import aktual.core.icons.material.ExpandMore
 import aktual.core.icons.material.MaterialIcons
+import aktual.core.icons.material.Sync
 import aktual.core.l10n.Strings
 import aktual.core.ui.AktualTheme.colors
 import aktual.core.ui.AktualTheme.typography
@@ -227,6 +228,15 @@ private fun CategoryRow(category: CategoryState, columns: Columns, onEdit: () ->
         overflow = TextOverflow.Ellipsis,
       )
       if (category.isHidden) HiddenBadge()
+      if (category.rollover) {
+        val rollover = Strings.budgetingRolloverOn
+        Icon(
+          modifier = Modifier.size(14.dp).semantics { contentDescription = rollover },
+          imageVector = MaterialIcons.Sync,
+          contentDescription = null,
+          tint = colors.tableTextSubdued,
+        )
+      }
     }
 
     Figures(

@@ -9,6 +9,7 @@ import aktual.budget.db.withResult
 import aktual.budget.model.Amount
 import aktual.budget.model.CategoryId
 import alakazam.kotlin.CoroutineContexts
+import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
@@ -82,6 +83,31 @@ class BudgetDao(database: BudgetDatabase, private val contexts: CoroutineContext
     queries.withResult {
       reflectBudgetId(month, category).awaitAsOneOrNull()
     }
+
+  // Budget rows already set for a category from [start] on, by month
+  suspend fun envelopeBudgetIdsFrom(
+    category: CategoryId,
+    start: YearMonth,
+  ): Map<YearMonth, String> =
+    queries
+      .withResult {
+        zeroBudgetIdsFrom(category, start).awaitAsList().mapNotNull { row ->
+          row.month?.let { it to row.id }
+        }
+      }
+      .toMap()
+
+  suspend fun trackingBudgetIdsFrom(
+    category: CategoryId,
+    start: YearMonth,
+  ): Map<YearMonth, String> =
+    queries
+      .withResult {
+        reflectBudgetIdsFrom(category, start).awaitAsList().mapNotNull { row ->
+          row.month?.let { it to row.id }
+        }
+      }
+      .toMap()
 
   @Suppress("CanBeNonNullable")
   private fun categoryBudget(
