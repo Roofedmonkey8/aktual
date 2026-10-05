@@ -112,6 +112,17 @@ class TransactionDao(database: BudgetDatabase) {
     getRowById(id).awaitAsOneOrNull()
   }
 
+  /** Transactions that could be the other side of a transfer, as transferCandidates picks them */
+  suspend fun transferCandidates(
+    account: AccountId,
+    amount: Amount,
+    start: LocalDate,
+    end: LocalDate,
+    exclude: TransactionId,
+  ): List<Transactions> = queries.withResult {
+    transferCandidates(account, amount, start, end, exclude).awaitAsList()
+  }
+
   // Every child of these split parents, deleted or not, as upstream's idsWithChildren()
   suspend fun childIds(parents: Collection<TransactionId>): List<TransactionId> =
     queries.withResult {

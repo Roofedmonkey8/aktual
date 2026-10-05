@@ -312,3 +312,11 @@ transactionDatesFromDate:
 SELECT schedule, date
 FROM transactions
 WHERE schedule IS NOT NULL AND tombstone = 0 AND date >= :fromDate;
+
+-- An imported transaction in [account] that looks like the other side of a new transfer: the
+-- opposite amount, a few days either side, not already part of a transfer or a split
+transferCandidates:
+SELECT * FROM transactions
+  WHERE acct = :account AND amount = :amount AND date >= :start AND date <= :end AND
+    IFNULL(tombstone, 0) = 0 AND IFNULL(isParent, 0) = 0 AND IFNULL(isChild, 0) = 0 AND
+    transferred_id IS NULL AND id != :exclude;

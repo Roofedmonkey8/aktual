@@ -7,12 +7,16 @@ import aktual.budget.model.PayeeId
 import aktual.budget.model.TransactionId
 import assertk.all
 import assertk.assertThat
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.prop
 import kotlin.test.Test
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
 internal class TransactionEditorTest {
   @Test
@@ -111,6 +115,74 @@ internal class TransactionEditorTest {
     assertThat(editor.load(TransactionId("missing"))).isNull()
   }
 
+  @Test
+  fun `A transfer links the matching transaction the other bank already imported`() =
+    runEditorTest {
+      val imported = importInto(SAVINGS, Amount(1_500), DATE.plus(2, DateTimeUnit.DAY))
+      val id = editor.create(draft(payee = toSavings, category = GROCERIES))
+
+      val row = requireNotNull(transactionDao.row(id))
+      assertThat(row.transferred_id).isEqualTo(imported)
+      assertThat(row.category).isNull()
+      assertThat(transactionDao.row(imported)).isNotNull().all {
+        prop("transferred_id") { it.transferred_id }.isEqualTo(id)
+        prop("description") { it.description }.isEqualTo(toChecking)
+        prop("financial_id") { it.financial_id }.isEqualTo("bank-1")
+        prop("category") { it.category }.isNull()
+        prop("date") { it.date }.isEqualTo(DATE.plus(2, DateTimeUnit.DAY))
+      }
+      // Nothing new was added to savings
+      assertThat(transactionDao.transferCandidates(SAVINGS, Amount(1_500), DATE, DATE, id))
+        .isEmpty()
+    }
+
+  @Test
+  fun `The closest date wins, and far-off or different amounts aren't matched`() = runEditorTest {
+    importInto(SAVINGS, Amount(1_500), DATE.plus(4, DateTimeUnit.DAY), importedId = "far")
+    val near =
+      importInto(SAVINGS, Amount(1_500), DATE.minus(1, DateTimeUnit.DAY), importedId = "near")
+    importInto(SAVINGS, Amount(1_499), DATE, importedId = "wrong-amount")
+    importInto(SAVINGS, Amount(1_500), DATE.plus(9, DateTimeUnit.DAY), importedId = "too-late")
+
+    val id = editor.create(draft(payee = toSavings))
+
+    assertThat(transactionDao.row(id)?.transferred_id).isEqualTo(near)
+  }
+
+  @Test
+  fun `With no match the other side is created as before`() = runEditorTest {
+    importInto(SAVINGS, Amount(1_500), DATE.plus(9, DateTimeUnit.DAY))
+    val id = editor.create(draft(payee = toSavings))
+
+    val other = requireNotNull(transactionDao.row(id)?.transferred_id)
+    assertThat(transactionDao.row(other)?.financial_id).isNull()
+  }
+
+  @Test
+  fun `Undoing a linked transfer keeps the bank's transaction`() = runEditorTest {
+    val imported = importInto(SAVINGS, Amount(1_500), DATE)
+    val id = editor.create(draft(payee = toSavings))
+
+    editor.update(id, draft(newPayeeName = "Corner shop"))
+
+    assertThat(transactionDao.row(imported)).isNotNull().all {
+      prop("tombstone") { it.tombstone }.isEqualTo(false)
+      prop("transferred_id") { it.transferred_id }.isNull()
+      prop("description") { it.description }.isNull()
+    }
+  }
+
+  @Test
+  fun `Deleting one side of a linked transfer keeps the bank's other side`() = runEditorTest {
+    val imported = importInto(SAVINGS, Amount(1_500), DATE)
+    val id = editor.create(draft(payee = toSavings))
+
+    editor.delete(id)
+
+    assertThat(transactionDao.row(id)?.tombstone).isEqualTo(true)
+    assertThat(transactionDao.row(imported)?.tombstone).isEqualTo(false)
+  }
+
   private fun draft(
     payee: PayeeId? = null,
     newPayeeName: String? = null,
@@ -152,6 +224,23 @@ private class EditorTestScope(
       payeeDao = scope.payeeDao,
       transactionDao = scope.transactionDao,
     )
+}
+
+private suspend fun EditorTestScope.importInto(
+  account: AccountId,
+  amount: Amount,
+  date: LocalDate,
+  importedId: String = "bank-1",
+): TransactionId = writer.write {
+  insert(
+    NewTransaction(
+      account = account,
+      date = date,
+      amount = amount,
+      importedId = importedId,
+      category = GROCERIES,
+    )
+  )
 }
 
 private fun runEditorTest(action: suspend EditorTestScope.() -> Unit) = runWriterTest {

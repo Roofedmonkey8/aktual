@@ -1,5 +1,6 @@
 package aktual.budget.transactions.domain
 
+import aktual.budget.db.Transactions
 import aktual.budget.db.dao.AccountDao
 import aktual.budget.db.dao.CategoryDao
 import aktual.budget.db.dao.PayeeDao
@@ -13,7 +14,11 @@ import aktual.budget.model.TransactionId
 import aktual.di.BudgetScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import kotlin.math.abs
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
 /** A transaction as the editor shows it */
 data class EditableTransaction(
@@ -182,13 +187,30 @@ class TransactionEditor(
   private suspend fun transferAccount(payee: PayeeId): AccountId? =
     payeeDao[payee]?.takeIf { it.tombstone != true }?.transfer_acct
 
-  // transfer.ts addTransfer()
+  // transfer.ts addTransfer(). Unlike upstream, when the other account already has the matching
+  // transaction (say both banks reported their side), that one's linked instead of adding another
   private suspend fun TransactionBatch.addTransfer(
     id: TransactionId,
     draft: TransactionDraft,
     transferAccount: AccountId,
   ) {
     val fromPayee = payeeDao.transferPayee(draft.account) ?: return
+    val match = findTransferMatch(id, draft, transferAccount)
+    if (match != null) {
+      update(
+        TransactionUpdate(
+          id = match.id,
+          payee = Patch.To(fromPayee),
+          transferId = Patch.To(id),
+          // Its own notes are kept, unless it has none
+          notes = if (match.notes.isNullOrBlank()) Patch.To(draft.notes) else Patch.Keep,
+        )
+      )
+      update(TransactionUpdate(id = id, transferId = Patch.To(match.id)))
+      clearCategory(id, match.id, draft.account, transferAccount)
+      return
+    }
+
     val other =
       insert(
         NewTransaction(
@@ -206,7 +228,8 @@ class TransactionEditor(
   }
 
   // transfer.ts removeTransfer(). A split line on the other side is kept as a normal transaction,
-  // since deleting it would break the split
+  // since deleting it would break the split. So is one a bank imported, since it really happened;
+  // it just stops being a transfer.
   private suspend fun TransactionBatch.removeTransfer(
     id: TransactionId,
     other: TransactionId,
@@ -214,7 +237,7 @@ class TransactionEditor(
   ) {
     val otherRow = transactionDao.row(other)
     if (otherRow != null && otherRow.tombstone != true) {
-      if (otherRow.isChild == true) {
+      if (otherRow.isChild == true || otherRow.financial_id != null) {
         update(TransactionUpdate(id = other, transferId = Patch.To(null), payee = Patch.To(null)))
       } else {
         delete(other)
@@ -257,6 +280,36 @@ class TransactionEditor(
     }
   }
 
+  /**
+   * The transaction in [transferAccount] most likely to be the other side of this one: the opposite
+   * amount, within [TRANSFER_MATCH_DAYS] days, and not already a transfer or part of a split. The
+   * closest date wins, then one the bank imported.
+   */
+  private suspend fun findTransferMatch(
+    id: TransactionId,
+    draft: TransactionDraft,
+    transferAccount: AccountId,
+  ): Transactions? {
+    if (draft.amount == Amount.Zero) return null
+    val candidates =
+      transactionDao.transferCandidates(
+        account = transferAccount,
+        amount = -draft.amount,
+        start = draft.date.minus(TRANSFER_MATCH_DAYS, DateTimeUnit.DAY),
+        end = draft.date.plus(TRANSFER_MATCH_DAYS, DateTimeUnit.DAY),
+        exclude = id,
+      )
+    return candidates.minWithOrNull(
+      compareBy<Transactions> { row ->
+          row.date?.let { abs(it.toEpochDays() - draft.date.toEpochDays()) } ?: Long.MAX_VALUE
+        }
+        .thenBy { if (it.financial_id != null) 0 else 1 }
+    )
+  }
+
   private suspend fun isOffBudget(account: AccountId): Boolean =
     accountDao[account]?.offbudget == true
 }
+
+/** How far apart two sides of a transfer can be dated, since banks post them on different days */
+internal const val TRANSFER_MATCH_DAYS = 5
